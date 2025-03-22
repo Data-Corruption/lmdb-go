@@ -1,3 +1,11 @@
+# lmdb-go Fork with Wrapper
+
+This repository is a fork of [PowerDNS/lmdb-go](https://github.com/PowerDNS/lmdb-go), which is a fork of [bmatsuo/lmdb-go](https://github.com/bmatsuo/lmdb-go). Thank's so much to all contributors and maintainers of these packages <3 I created this fork to experiment with a [wrapper package](https://github.com/Data-Corruption/lmdb-go/blob/master/wrap/wrap.go) that simplifies common LMDB usage, and to use it in a few projects.
+
+The following sections are from the original README.md of [PowerDNS/lmdb-go](https://github.com/PowerDNS/lmdb-go) at the time of the fork.
+
+---
+
 # lmdb-go [![releases/v1.9.2](https://img.shields.io/badge/release-v1.9.2-375eab.svg)](https://github.com/PowerDNS/lmdb-go/releases) [![C/v0.9.31](https://img.shields.io/badge/C-v0.9.31-555555.svg)](https://github.com/LMDB/lmdb/blob/mdb.RE/0.9/libraries/liblmdb/CHANGES) [![Build Status](https://github.com/PowerDNS/lmdb-go/actions/workflows/go.yml/badge.svg?branch=master)]
 
 Go bindings to the OpenLDAP Lightning Memory-Mapped Database (LMDB).
