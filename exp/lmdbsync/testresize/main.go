@@ -28,8 +28,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/PowerDNS/lmdb-go/exp/lmdbsync"
-	"github.com/PowerDNS/lmdb-go/lmdb"
+	"github.com/Data-Corruption/lmdb-go/exp/lmdbsync"
+	"github.com/Data-Corruption/lmdb-go/lmdb"
 )
 
 func main() {

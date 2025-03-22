@@ -1,4 +1,4 @@
-module github.com/PowerDNS/lmdb-go
+module github.com/Data-Corruption/lmdb-go
 
 go 1.17
 

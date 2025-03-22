@@ -14,8 +14,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/PowerDNS/lmdb-go/internal/lmdbcmd"
-	"github.com/PowerDNS/lmdb-go/lmdb"
+	"github.com/Data-Corruption/lmdb-go/internal/lmdbcmd"
+	"github.com/Data-Corruption/lmdb-go/lmdb"
 )
 
 func main() {

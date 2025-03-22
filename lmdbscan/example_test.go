@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"log"
 
-	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/PowerDNS/lmdb-go/lmdbscan"
+	"github.com/Data-Corruption/lmdb-go/lmdb"
+	"github.com/Data-Corruption/lmdb-go/lmdbscan"
 )
 
 var env *lmdb.Env

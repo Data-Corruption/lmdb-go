@@ -21,9 +21,9 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/PowerDNS/lmdb-go/internal/lmdbcmd"
-	"github.com/PowerDNS/lmdb-go/lmdb"
-	"github.com/PowerDNS/lmdb-go/lmdbscan"
+	"github.com/Data-Corruption/lmdb-go/internal/lmdbcmd"
+	"github.com/Data-Corruption/lmdb-go/lmdb"
+	"github.com/Data-Corruption/lmdb-go/lmdbscan"
 )
 
 func main() {

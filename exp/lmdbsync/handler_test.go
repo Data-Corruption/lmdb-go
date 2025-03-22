@@ -7,8 +7,8 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/PowerDNS/lmdb-go/internal/lmdbtest"
-	"github.com/PowerDNS/lmdb-go/lmdb"
+	"github.com/Data-Corruption/lmdb-go/internal/lmdbtest"
+	"github.com/Data-Corruption/lmdb-go/lmdb"
 )
 
 type testHandler struct {
