@@ -6,6 +6,7 @@ import (
 	"os"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"github.com/Data-Corruption/lmdb-go/lmdb"
 )
@@ -15,6 +16,7 @@ const MapSize = 10 * 1 << 30 // 10 GB
 var (
 	ErrDuplicateDbName = errors.New("duplicate database name")
 	ErrDbNameNotFound  = errors.New("database name not found")
+	ErrDBClosed        = errors.New("database is closed")
 	ErrEmptyKey        = errors.New("empty key")
 )
 
@@ -28,10 +30,12 @@ type updateOp struct {
 
 // DB represents a simple LMDB database wrapper.
 type DB struct {
-	env  *lmdb.Env
-	dbs  map[string]lmdb.DBI // handle is just a uint, safe to cache for the lifetime of the DB
-	uOps chan *updateOp
-	wg   sync.WaitGroup // for closing the update goroutine cleanly
+	env       *lmdb.Env
+	dbs       map[string]lmdb.DBI // handle is just a uint, safe to cache for the lifetime of the DB
+	uOps      chan *updateOp
+	wg        sync.WaitGroup // for closing the update goroutine cleanly
+	closeOnce sync.Once
+	closed    uint32
 }
 
 // New creates (or opens) an LMDB environment at the specified directory path and initializes the given databases.
@@ -106,31 +110,9 @@ func New(dirPath string, dbNames []string) (*DB, int, error) {
 	return newDB, staleReaders, nil
 }
 
-// update sends an LMDB write operation to the update goroutine and waits for the result.
-func (db *DB) update(op lmdb.TxnOp) error {
-	res := make(chan error)
-	db.uOps <- &updateOp{op, res}
-	return <-res
-}
-
-// helper function for Read, Write, and Delete argument parsing
-func (db *DB) parseArgs(dbName string, key []byte) (lmdb.DBI, error) {
-	if dbName == "" {
-		return 0, ErrDbNameNotFound
-	}
-	if (key == nil) || (len(key) == 0) {
-		return 0, ErrEmptyKey
-	}
-	dbi, ok := db.dbs[dbName]
-	if !ok {
-		return 0, ErrDbNameNotFound
-	}
-	return dbi, nil
-}
-
 // Read retrieves a value from the database.
 func (db *DB) Read(dbName string, key []byte) ([]byte, error) {
-	dbi, err := db.parseArgs(dbName, key)
+	dbi, err := db.validateArgs(dbName, key)
 	if err != nil {
 		return nil, err
 	}
@@ -145,31 +127,82 @@ func (db *DB) Read(dbName string, key []byte) ([]byte, error) {
 
 // Write inserts a key/value pair into the database.
 func (db *DB) Write(dbName string, key, value []byte) error {
-	dbi, err := db.parseArgs(dbName, key)
+	dbi, err := db.validateArgs(dbName, key)
 	if err != nil {
 		return err
 	}
 	// write the key/value pair
-	return db.update(func(txn *lmdb.Txn) error {
+	return db.Update(func(txn *lmdb.Txn) error {
 		return txn.Put(dbi, key, value, 0)
 	})
 }
 
 // Delete removes a key/value pair from the database.
 func (db *DB) Delete(dbName string, key []byte) error {
-	dbi, err := db.parseArgs(dbName, key)
+	dbi, err := db.validateArgs(dbName, key)
 	if err != nil {
 		return err
 	}
 	// delete the key/value pair
-	return db.update(func(txn *lmdb.Txn) error {
+	return db.Update(func(txn *lmdb.Txn) error {
 		return txn.Del(dbi, key, nil)
 	})
 }
 
+// Update sends an LMDB operation to the update goroutine and waits for the result.
+//
+// Usage:
+//
+//	err := db.Update(func(txn *lmdb.Txn) error {
+//		dbi := db.GetDBis()["users"]
+//		data, err := txn.Get(dbi, []byte("user:123"))
+//		if err != nil {
+//			return err
+//		}
+//		if !shouldUpdate(data) {
+//			return nil
+//		}
+//		return txn.Put(dbi, []byte("user:123"), update(data), 0)
+//	})
+func (db *DB) Update(op lmdb.TxnOp) error {
+	if atomic.LoadUint32(&db.closed) != 0 {
+		return ErrDBClosed
+	}
+	res := make(chan error)
+	db.uOps <- &updateOp{op, res}
+	return <-res
+}
+
+// GetDBis returns a copy of database names to DBI handle mappings.
+func (db *DB) GetDBis() map[string]lmdb.DBI {
+	dbis := make(map[string]lmdb.DBI, len(db.dbs))
+	for k, v := range db.dbs {
+		dbis[k] = v
+	}
+	return dbis
+}
+
 // Close cleanly shuts down the LMDB environment.
 func (db *DB) Close() {
-	close(db.uOps)
-	db.wg.Wait()
-	db.env.Close()
+	db.closeOnce.Do(func() {
+		atomic.StoreUint32(&db.closed, 1)
+		close(db.uOps)
+		db.wg.Wait()
+		db.env.Close()
+	})
+}
+
+// validateArgs is a helper for Read, Write, and Delete argument parsing.
+func (db *DB) validateArgs(dbName string, key []byte) (lmdb.DBI, error) {
+	if dbName == "" {
+		return 0, ErrDbNameNotFound
+	}
+	if (key == nil) || (len(key) == 0) {
+		return 0, ErrEmptyKey
+	}
+	dbi, ok := db.dbs[dbName]
+	if !ok {
+		return 0, ErrDbNameNotFound
+	}
+	return dbi, nil
 }
