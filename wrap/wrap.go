@@ -149,7 +149,7 @@ func (db *DB) Delete(dbName string, key []byte) error {
 	})
 }
 
-// Update sends an LMDB operation to the update goroutine and waits for the result.
+// Update runs an LMDB transaction.
 //
 // Usage:
 //
@@ -171,6 +171,26 @@ func (db *DB) Update(op lmdb.TxnOp) error {
 	res := make(chan error)
 	db.uOps <- &updateOp{op, res}
 	return <-res
+}
+
+// View runs a read-only LMDB transaction.
+//
+// Usage:
+//
+//	err := db.View(func(txn *lmdb.Txn) error {
+//		dbi := db.GetDBis()["users"]
+//		data, err := txn.Get(dbi, []byte("user:123"))
+//		if err != nil {
+//			return err
+//		}
+//		process(data)
+//		return nil
+//	})
+func (db *DB) View(op lmdb.TxnOp) error {
+	if atomic.LoadUint32(&db.closed) != 0 {
+		return ErrDBClosed
+	}
+	return db.env.View(op)
 }
 
 // GetDBis returns a copy of database names to DBI handle mappings.
