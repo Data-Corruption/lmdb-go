@@ -11,7 +11,10 @@ import (
 	"github.com/Data-Corruption/lmdb-go/lmdb"
 )
 
-const MapSize = 10 * 1 << 30 // 10 GB
+const (
+	MaxNamedDBs = 128          // If you need more, you probably shouldn't be using LMDB.
+	MapSize     = 10 * 1 << 30 // 10 GB
+)
 
 var (
 	ErrDuplicateDbName = errors.New("duplicate database name")
@@ -65,7 +68,7 @@ func New(dirPath string, dbNames []string) (*DB, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	if err = newDB.env.SetMaxDBs(len(dbNames)); err != nil {
+	if err = newDB.env.SetMaxDBs(MaxNamedDBs); err != nil {
 		return nil, 0, err
 	}
 	if err = newDB.env.SetMapSize(MapSize); err != nil {
@@ -217,7 +220,7 @@ func (db *DB) validateArgs(dbName string, key []byte) (lmdb.DBI, error) {
 	if dbName == "" {
 		return 0, ErrDbNameNotFound
 	}
-	if (key == nil) || (len(key) == 0) {
+	if len(key) == 0 {
 		return 0, ErrEmptyKey
 	}
 	dbi, ok := db.dbs[dbName]
